@@ -34,10 +34,20 @@ class Editor:
         if not mouse_buttons()[1]:
             self.pan_active = False
 
+        # mouse wheel
+        if event.type == pygame.MOUSEWHEEL:
+            # マウスによって+1/-1以外の大きな値を取る場合があるので+1/-1のみ使う
+            event.y = 1 if event.y > 0 else -1
+            # CTRLを押しながらホイールを動かすとoriginが縦に動く
+            # 押さなかったらoriginが横に動く
+            if pygame.key.get_pressed()[pygame.K_LCTRL]:
+                self.origin.y -= event.y * 50
+            else:
+                self.origin.x -= event.y * 50
+
         # panning update
         if self.pan_active:
             self.origin = vector(mouse_pos()) - self.pan_offset
-            print(mouse_pos(), self.pan_offset, self.origin)
 
     def run(self, dt):
         self.display_surface.fill("white")
