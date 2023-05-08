@@ -1,5 +1,6 @@
 import pygame
 from editor import Editor
+from pygame.image import load
 from settings import WINDOW_HEIGHT, WINDOW_WIDTH
 
 
@@ -10,6 +11,12 @@ class Main:
         self.clock = pygame.time.Clock()
 
         self.editor = Editor()
+
+        # マウスカーソルを変更
+        surf = load("graphics/cursors/mouse.png").convert_alpha()
+        # カーソル画像の (0, 0) をクリックできるエリアとして指定
+        cursor = pygame.cursors.Cursor((0, 0), surf)
+        pygame.mouse.set_cursor(cursor)
 
     def run(self):
         while True:
