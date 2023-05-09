@@ -1,6 +1,7 @@
 import sys
 
 import pygame
+from menu import Menu
 from pygame.math import Vector2 as vector
 from pygame.mouse import get_pos as mouse_pos
 from pygame.mouse import get_pressed as mouse_buttons
@@ -28,6 +29,9 @@ class Editor:
         # selection
         self.selection_index = 2
 
+        # menu
+        self.menu = Menu()
+
     # input
     def event_loop(self):
         for event in pygame.event.get():
@@ -40,6 +44,9 @@ class Editor:
 
             # ホットキーによるアイテムの選択切り替え
             self.selection_hotkeys(event)
+
+            # メニュー区間がクリックされたか
+            self.menu_click(event)
 
     def pan_input(self, event):
         # middle mouse button pressed / released
@@ -73,6 +80,13 @@ class Editor:
                 self.selection_index -= 1
         # 2-18の間に制限する
         self.selection_index = max(2, min(self.selection_index, 18))
+
+    def menu_click(self, event):
+        # まずはメニューエリアがクリックされたか調べる
+        if event.type == pygame.MOUSEBUTTONDOWN and self.menu.rect.collidepoint(
+            mouse_pos()
+        ):
+            self.selection_index = self.menu.click(mouse_pos(), mouse_buttons())
 
     def draw_tile_lines(self):
         cols = WINDOW_WIDTH // TILE_SIZE
@@ -110,8 +124,9 @@ class Editor:
     def run(self, dt):
         self.event_loop()
 
-        self.display_surface.fill("white")
+        self.display_surface.fill("gray")
         self.draw_tile_lines()
         pygame.draw.circle(
             self.display_surface, color="red", center=self.origin, radius=10
         )
+        self.menu.display(self.selection_index)
