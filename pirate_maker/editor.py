@@ -25,13 +25,21 @@ class Editor:
         self.support_line_surf.set_colorkey("green")
         self.support_line_surf.set_alpha(30)
 
+        # selection
+        self.selection_index = 2
+
     # input
     def event_loop(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            # マウスによる原点の移動
             self.pan_input(event)
+
+            # ホットキーによるアイテムの選択切り替え
+            self.selection_hotkeys(event)
 
     def pan_input(self, event):
         # middle mouse button pressed / released
@@ -56,6 +64,15 @@ class Editor:
         # panning update
         if self.pan_active:
             self.origin = vector(mouse_pos()) - self.pan_offset
+
+    def selection_hotkeys(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                self.selection_index += 1
+            if event.key == pygame.K_LEFT:
+                self.selection_index -= 1
+        # 2-18の間に制限する
+        self.selection_index = max(2, min(self.selection_index, 18))
 
     def draw_tile_lines(self):
         cols = WINDOW_WIDTH // TILE_SIZE
