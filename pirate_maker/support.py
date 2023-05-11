@@ -1,0 +1,27 @@
+import os
+
+import pygame
+
+
+def import_folder(path):
+    surface_list = []
+
+    for _, _, img_files in os.walk(path):
+        for image_name in img_files:
+            full_path = path + "/" + image_name
+            image_surf = pygame.image.load(full_path)
+            surface_list.append(image_surf)
+
+    return surface_list
+
+
+def import_folder_dict(path):
+    surface_dict = {}
+
+    for _, _, img_files in os.walk(path):
+        for image_name in img_files:
+            full_path = path + "/" + image_name
+            image_surf = pygame.image.load(full_path)
+            surface_dict[image_name.split(".")[0]] = image_surf
+
+    return surface_dict
