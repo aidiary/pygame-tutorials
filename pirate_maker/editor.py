@@ -2,6 +2,7 @@ import sys
 
 import pygame
 from menu import Menu
+from pygame.image import load
 from pygame.math import Vector2 as vector
 from pygame.mouse import get_pos as mouse_pos
 from pygame.mouse import get_pressed as mouse_buttons
@@ -24,6 +25,7 @@ class Editor:
 
         # imports
         self.land_tiles = land_tiles
+        self.imports()
 
         # navigation
         self.origin = vector()
@@ -78,15 +80,32 @@ class Editor:
         # 周囲のマスすべてが影響を受けるので隣のセルをチェック
         for cell in local_cluster:
             if cell in self.canvas_data:
+                # 隣のタイルに対する設定をリセット
                 self.canvas_data[cell].terrain_neighbors = []
+                self.canvas_data[cell].water_on_top = False
+
                 # NEIGHBOR_DIRECTIONSには周囲8マスの相対位置が入っている
                 # forループで全方位を調べる
                 for name, side in NEIGHBOR_DIRECTIONS.items():
                     neighbor_cell = (cell[0] + side[0], cell[1] + side[1])
-                    # 隣のセルにterrainがあるか？あったら方向のアルファベットを追加
+
                     if neighbor_cell in self.canvas_data:
+                        # water top neighbor
+                        # 中心がwaterタイルで上のもwaterタイルがあった場合
+                        if (
+                            self.canvas_data[neighbor_cell].has_water
+                            and self.canvas_data[cell].has_water
+                            and name == "A"
+                        ):
+                            self.canvas_data[cell].water_on_top = True
+
+                        # terrain neighbors
+                        # 隣のセルにterrainがあるか？あったら方向のアルファベットを追加
                         if self.canvas_data[neighbor_cell].has_terrain:
                             self.canvas_data[cell].terrain_neighbors.append(name)
+
+    def imports(self):
+        self.water_bottom = load("./graphics/terrain/water/water_bottom.png")
 
     # input
     def event_loop(self):
@@ -203,9 +222,12 @@ class Editor:
 
             # water
             if tile.has_water:
-                test_surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                test_surf.fill("blue")
-                self.display_surface.blit(test_surf, pos)
+                if tile.water_on_top:
+                    self.display_surface.blit(self.water_bottom, pos)
+                else:
+                    test_surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                    test_surf.fill("red")
+                    self.display_surface.blit(test_surf, pos)
 
             # terrain
             if tile.has_terrain:
