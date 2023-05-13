@@ -7,6 +7,7 @@ from pygame.math import Vector2 as vector
 from pygame.mouse import get_pos as mouse_pos
 from pygame.mouse import get_pressed as mouse_buttons
 from settings import (
+    ANIMATION_SPEED,
     EDITOR_DATA,
     LINE_COLOR,
     NEIGHBOR_DIRECTIONS,
@@ -14,6 +15,7 @@ from settings import (
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
 )
+from support import import_folder
 
 
 class Editor:
@@ -106,6 +108,25 @@ class Editor:
 
     def imports(self):
         self.water_bottom = load("./graphics/terrain/water/water_bottom.png")
+
+        # animations
+        self.animations = {}
+        for key, value in EDITOR_DATA.items():
+            # graphics属性があるデータはアニメーションするのですべてロード
+            # アニメーション管理用の辞書も作成
+            if value["graphics"]:
+                graphics = import_folder(value["graphics"])
+                self.animations[key] = {
+                    "frame_index": 0,
+                    "frames": graphics,
+                    "length": len(graphics),
+                }
+
+    def animation_update(self, dt):
+        for value in self.animations.values():
+            value["frame_index"] += ANIMATION_SPEED * dt
+            if value["frame_index"] >= value["length"]:
+                value["frame_index"] = 0
 
     # input
     def event_loop(self):
@@ -225,9 +246,13 @@ class Editor:
                 if tile.water_on_top:
                     self.display_surface.blit(self.water_bottom, pos)
                 else:
-                    test_surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                    test_surf.fill("red")
-                    self.display_surface.blit(test_surf, pos)
+                    # 水のアニメーション
+                    # Spriteは大量にあると遅くなるので作らない
+                    # 描画時に画像の切り替えをすることでアニメーション化
+                    frames = self.animations[3]["frames"]
+                    index = int(self.animations[3]["frame_index"])
+                    surf = frames[index]
+                    self.display_surface.blit(surf, pos)
 
             # terrain
             if tile.has_terrain:
@@ -240,19 +265,35 @@ class Editor:
 
             # coins
             if tile.coin:
-                test_surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                test_surf.fill("yellow")
-                self.display_surface.blit(test_surf, pos)
+                # コインのアニメーション
+                frames = self.animations[tile.coin]["frames"]
+                index = int(self.animations[tile.coin]["frame_index"])
+                surf = frames[index]
+                # コインをタイルの中央に配置するために少しずらす
+                rect = surf.get_rect(
+                    center=(pos[0] + TILE_SIZE // 2, pos[1] + TILE_SIZE // 2)
+                )
+                self.display_surface.blit(surf, rect)
 
             # enemies
             if tile.enemy:
-                test_surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                test_surf.fill("red")
-                self.display_surface.blit(test_surf, pos)
+                # 敵のアニメーション
+                frames = self.animations[tile.enemy]["frames"]
+                index = int(self.animations[tile.enemy]["frame_index"])
+                surf = frames[index]
+                # 敵が地面に立つように下側に合わせる
+                rect = surf.get_rect(
+                    midbottom=(pos[0] + TILE_SIZE // 2, pos[1] + TILE_SIZE)
+                )
+                self.display_surface.blit(surf, rect)
 
     def run(self, dt):
         self.event_loop()
 
+        # updating
+        self.animation_update(dt)
+
+        # drawing
         self.display_surface.fill("gray")
         self.draw_tile_lines()
         self.draw_level()
