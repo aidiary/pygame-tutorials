@@ -144,8 +144,11 @@ class Editor:
             # メニューがクリックされたか
             self.menu_click(event)
 
-            # キャンバスがクリックされたか
+            # キャンバスが左クリックされてオブジェクトが追加されたか
             self.canvas_add()
+
+            # キャンバスが右クリックされてオブジェクトが削除されたか
+            self.canvas_remove()
 
     def pan_input(self, event):
         # middle mouse button pressed / released
@@ -203,6 +206,22 @@ class Editor:
                 # 周囲のマスを調べて繋がりがあるか調べる
                 self.check_neighbors(current_cell)
                 self.last_selected_cell = current_cell
+
+    def canvas_remove(self):
+        # 右クリックでメニュー以外の部分をクリックしたとき
+        if mouse_buttons()[2] and not self.menu.rect.collidepoint(mouse_pos()):
+            if self.canvas_data:
+                current_cell = self.get_current_cell()
+                if current_cell in self.canvas_data:
+                    # ターゲットのオブジェクトを削除
+                    self.canvas_data[current_cell].remove_id(self.selection_index)
+
+                    # もしすべてのオブジェクトがなかったらエントリ自体を削除
+                    if self.canvas_data[current_cell].is_empty:
+                        del self.canvas_data[current_cell]
+
+                    # オブジェクトを削除すると画像が変わるケースがあるので更新
+                    self.check_neighbors(current_cell)
 
     def draw_tile_lines(self):
         cols = WINDOW_WIDTH // TILE_SIZE
@@ -325,6 +344,7 @@ class CanvasTile:
         self.objects = []
 
         self.add_id(tile_id)
+        self.is_empty = False
 
     def add_id(self, tile_id):
         options = {key: value["style"] for key, value in EDITOR_DATA.items()}
@@ -337,3 +357,26 @@ class CanvasTile:
                 self.coin = tile_id
             case "enemy":
                 self.enemy = tile_id
+
+    def remove_id(self, tile_id):
+        options = {key: value["style"] for key, value in EDITOR_DATA.items()}
+        match options[tile_id]:
+            case "terrain":
+                self.has_terrain = False
+            case "water":
+                self.has_water = False
+            case "coin":
+                self.coin = None
+            case "enemy":
+                self.enemy = None
+        self.check_content()
+
+    def check_content(self):
+        # すべてのオブジェクトがなくなったかチェックする
+        if (
+            not self.has_terrain
+            and not self.has_water
+            and not self.coin
+            and not self.enemy
+        ):
+            self.is_empty = True
