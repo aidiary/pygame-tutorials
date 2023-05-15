@@ -9,7 +9,7 @@ def import_folder(path):
     for _, _, img_files in os.walk(path):
         for image_name in img_files:
             full_path = path + "/" + image_name
-            image_surf = pygame.image.load(full_path)
+            image_surf = pygame.image.load(full_path).convert_alpha()
             surface_list.append(image_surf)
 
     return surface_list
@@ -21,7 +21,7 @@ def import_folder_dict(path):
     for _, _, img_files in os.walk(path):
         for image_name in img_files:
             full_path = path + "/" + image_name
-            image_surf = pygame.image.load(full_path)
+            image_surf = pygame.image.load(full_path).convert_alpha()
             surface_dict[image_name.split(".")[0]] = image_surf
 
     return surface_dict
