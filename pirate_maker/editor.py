@@ -2,6 +2,7 @@ import sys
 
 import pygame
 from menu import Menu
+from mytimer import Timer
 from pygame.image import load
 from pygame.math import Vector2 as vector
 from pygame.mouse import get_pos as mouse_pos
@@ -54,6 +55,8 @@ class Editor:
 
         # オブジェクトのドラッグ中か？
         self.object_drag_active = False
+
+        self.object_timer = Timer(400)
 
         # player
         CanvasObject(
@@ -156,6 +159,12 @@ class Editor:
             if value["frame_index"] >= value["length"]:
                 value["frame_index"] = 0
 
+    def mouse_on_object(self):
+        """マウスの位置にあるオブジェクトを返す"""
+        for sprite in self.canvas_objects:
+            if sprite.rect.collidepoint(mouse_pos()):
+                return sprite
+
     # input
     def event_loop(self):
         for event in pygame.event.get():
@@ -250,17 +259,33 @@ class Editor:
                     self.check_neighbors(current_cell)
                     self.last_selected_cell = current_cell
             else:  # object
-                CanvasObject(
-                    pos=mouse_pos(),
-                    frames=self.animations[self.selection_index]["frames"],
-                    tile_id=self.selection_index,
-                    origin=self.origin,
-                    group=self.canvas_objects,
-                )
+                # タイマーがアクティブでなかったら新しいオブジェクトを追加する
+                # 連続してオブジェクトが配置されないための工夫
+                # 次に配置されるのはタイマーが終了してから
+                if not self.object_timer.active:
+                    CanvasObject(
+                        pos=mouse_pos(),
+                        frames=self.animations[self.selection_index]["frames"],
+                        tile_id=self.selection_index,
+                        origin=self.origin,
+                        group=self.canvas_objects,
+                    )
+                    self.object_timer.activate()
 
     def canvas_remove(self):
-        # 右クリックでメニュー以外の部分をクリックしたとき
+        # 右クリックでメニュー以外の部分をクリックしたときに
         if mouse_buttons()[2] and not self.menu.rect.collidepoint(mouse_pos()):
+            # オブジェクトを削除する
+            selected_object = self.mouse_on_object()
+            if selected_object:
+                # 削除できるのはplayerとsky以外にする
+                if EDITOR_DATA[selected_object.tile_id]["style"] not in (
+                    "player",
+                    "sky",
+                ):
+                    selected_object.kill()
+
+            # タイルを削除する
             if self.canvas_data:
                 current_cell = self.get_current_cell()
                 if current_cell in self.canvas_data:
@@ -378,6 +403,7 @@ class Editor:
         # updating
         self.animation_update(dt)
         self.canvas_objects.update(dt)
+        self.object_timer.update()
 
         # drawing
         self.display_surface.fill("gray")
