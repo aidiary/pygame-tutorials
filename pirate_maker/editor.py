@@ -78,6 +78,7 @@ class Editor:
 
     # support
     def get_current_cell(self):
+        """マウスがある位置のセル（row, col）を取得する"""
         distance_to_origin = vector(mouse_pos()) - self.origin
 
         if distance_to_origin.x > 0:
@@ -152,6 +153,13 @@ class Editor:
                     "frames": graphics,
                     "length": len(graphics),
                 }
+
+        # preview
+        self.preview_surfs = {
+            key: load(value["preview"])
+            for key, value in EDITOR_DATA.items()
+            if value["preview"]
+        }
 
     def animation_update(self, dt):
         for value in self.animations.values():
@@ -397,6 +405,86 @@ class Editor:
 
         self.canvas_objects.draw(self.display_surface)
 
+    def preview(self):
+        """オブジェクトやタイルのプレビューを表示する"""
+        selected_object = self.mouse_on_object()
+        if not self.menu.rect.collidepoint(mouse_pos()):
+            # 選択しているオブジェクトはSpriteより少し広めの範囲をカッコで囲む
+            if selected_object:
+                rect = selected_object.rect.inflate(10, 10)
+                color = "black"
+                width = 3
+                size = 15
+
+                # 左上のカッコ
+                pygame.draw.lines(
+                    self.display_surface,
+                    color,
+                    False,
+                    (
+                        (rect.left, rect.top + size),
+                        rect.topleft,
+                        (rect.left + size, rect.top),
+                    ),
+                    width,
+                )
+
+                # 右上のカッコ
+                pygame.draw.lines(
+                    self.display_surface,
+                    color,
+                    False,
+                    (
+                        (rect.right - size, rect.top),
+                        rect.topright,
+                        (rect.right, rect.top + size),
+                    ),
+                    width,
+                )
+
+                # 右下のカッコ
+                pygame.draw.lines(
+                    self.display_surface,
+                    color,
+                    False,
+                    (
+                        (rect.right - size, rect.bottom),
+                        rect.bottomright,
+                        (rect.right, rect.bottom - size),
+                    ),
+                    width,
+                )
+
+                # 左下のカッコ
+                pygame.draw.lines(
+                    self.display_surface,
+                    color,
+                    False,
+                    (
+                        (rect.left, rect.bottom - size),
+                        rect.bottomleft,
+                        (rect.left + size, rect.bottom),
+                    ),
+                    width,
+                )
+            else:
+                # オブジェクト以外はプレビュー（すこし薄め）のオブジェクトやタイルを描画する
+                type_dict = {key: value["type"] for key, value in EDITOR_DATA.items()}
+                surf = self.preview_surfs[self.selection_index].copy()
+                surf.set_alpha(200)
+
+                # tile
+                if type_dict[self.selection_index] == "tile":
+                    current_cell = self.get_current_cell()
+                    rect = surf.get_rect(
+                        topleft=self.origin + vector(current_cell) * TILE_SIZE
+                    )
+                # object
+                else:
+                    rect = surf.get_rect(center=mouse_pos())
+
+                self.display_surface.blit(surf, rect)
+
     def run(self, dt):
         self.event_loop()
 
@@ -407,11 +495,12 @@ class Editor:
 
         # drawing
         self.display_surface.fill("gray")
-        self.draw_tile_lines()
         self.draw_level()
+        self.draw_tile_lines()
         pygame.draw.circle(
             self.display_surface, color="red", center=self.origin, radius=10
         )
+        self.preview()
         self.menu.display(self.selection_index)
 
 
