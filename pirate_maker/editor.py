@@ -1,4 +1,5 @@
 import sys
+from random import choice, randint
 
 import pygame
 from menu import Menu
@@ -10,8 +11,12 @@ from pygame.mouse import get_pressed as mouse_buttons
 from settings import (
     ANIMATION_SPEED,
     EDITOR_DATA,
+    HORIZON_COLOR,
+    HORIZON_TOP_COLOR,
     LINE_COLOR,
     NEIGHBOR_DIRECTIONS,
+    SEA_COLOR,
+    SKY_COLOR,
     TILE_SIZE,
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
@@ -29,6 +34,13 @@ class Editor:
         # imports
         self.land_tiles = land_tiles
         self.imports()
+
+        # clouds
+        self.current_clouds = []
+        self.cloud_surf = import_folder("./graphics/clouds")
+        self.cloud_timer = pygame.USEREVENT + 1
+        pygame.time.set_timer(self.cloud_timer, 2000)
+        self.startup_clouds()
 
         # navigation
         self.origin = vector()
@@ -197,6 +209,9 @@ class Editor:
 
             # キャンバスが右クリックされてオブジェクトが削除されたか
             self.canvas_remove()
+
+            # 雲を作る
+            self.create_clouds(event)
 
     def pan_input(self, event):
         # middle mouse button pressed / released
@@ -485,6 +500,66 @@ class Editor:
 
                 self.display_surface.blit(surf, rect)
 
+    def display_sky(self, dt):
+        self.display_surface.fill(SKY_COLOR)
+        y = self.sky_handle.rect.centery
+
+        if y > 0:
+            # 地平線
+            horizon_rect1 = pygame.Rect(0, y - 10, WINDOW_WIDTH, 10)
+            horizon_rect2 = pygame.Rect(0, y - 16, WINDOW_WIDTH, 4)
+            horizon_rect3 = pygame.Rect(0, y - 20, WINDOW_WIDTH, 2)
+            pygame.draw.rect(self.display_surface, HORIZON_TOP_COLOR, horizon_rect1)
+            pygame.draw.rect(self.display_surface, HORIZON_TOP_COLOR, horizon_rect2)
+            pygame.draw.rect(self.display_surface, HORIZON_TOP_COLOR, horizon_rect3)
+
+            # 雲
+            self.display_clouds(dt, y)
+
+        # 海
+        if 0 < y < WINDOW_HEIGHT:
+            sea_rect = pygame.Rect(0, y, WINDOW_WIDTH, WINDOW_HEIGHT)
+            pygame.draw.rect(self.display_surface, SEA_COLOR, sea_rect)
+            # 地平線
+            pygame.draw.line(
+                self.display_surface, HORIZON_COLOR, (0, y), (WINDOW_WIDTH, y), 3
+            )
+
+        # 地平線が画面の上にはみ出したら下はすべて海扱いにする
+        if y < 0:
+            self.display_surface.fill(SEA_COLOR)
+
+    def display_clouds(self, dt, horizon_y):
+        for cloud in self.current_clouds:  # [{surf, pos, speed}]
+            cloud["pos"][0] -= cloud["speed"] * dt
+            x = cloud["pos"][0]
+            y = horizon_y - cloud["pos"][1]
+            self.display_surface.blit(cloud["surf"], (x, y))
+
+    def create_clouds(self, event):
+        if event.type == self.cloud_timer:
+            surf = choice(self.cloud_surf)
+            # 50%の確率で雲サイズを2倍する
+            surf = pygame.transform.scale2x(surf) if randint(0, 4) < 2 else surf
+            pos = [WINDOW_WIDTH + randint(50, 100), randint(0, WINDOW_HEIGHT)]
+            self.current_clouds.append(
+                {"surf": surf, "pos": pos, "speed": randint(20, 50)}
+            )
+
+            # 画面外の雲は削除 = 画面内の雲のみ残す
+            self.current_clouds = [
+                cloud for cloud in self.current_clouds if cloud["pos"][0] > -400
+            ]
+
+    def startup_clouds(self):
+        for i in range(20):
+            surf = choice(self.cloud_surf)
+            surf = pygame.transform.scale2x(surf) if randint(0, 4) < 2 else surf
+            pos = [randint(0, WINDOW_WIDTH), randint(0, WINDOW_HEIGHT)]
+            self.current_clouds.append(
+                {"surf": surf, "pos": pos, "speed": randint(20, 50)}
+            )
+
     def run(self, dt):
         self.event_loop()
 
@@ -495,11 +570,12 @@ class Editor:
 
         # drawing
         self.display_surface.fill("gray")
+        self.display_sky(dt)
         self.draw_level()
         self.draw_tile_lines()
-        pygame.draw.circle(
-            self.display_surface, color="red", center=self.origin, radius=10
-        )
+        # pygame.draw.circle(
+        #     self.display_surface, color="red", center=self.origin, radius=10
+        # )
         self.preview()
         self.menu.display(self.selection_index)
 
