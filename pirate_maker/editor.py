@@ -64,6 +64,8 @@ class Editor:
         # objects
         # タイルに制限されないオブジェクト
         self.canvas_objects = pygame.sprite.Group()
+        self.foreground = pygame.sprite.Group()
+        self.background = pygame.sprite.Group()
 
         # オブジェクトのドラッグ中か？
         self.object_drag_active = False
@@ -76,7 +78,7 @@ class Editor:
             frames=self.animations[0]["frames"],
             tile_id=0,
             origin=self.origin,
-            group=self.canvas_objects,
+            group=[self.canvas_objects, self.foreground],
         )
 
         # sky
@@ -85,7 +87,7 @@ class Editor:
             frames=[self.sky_handle_surf],
             tile_id=1,
             origin=self.origin,
-            group=self.canvas_objects,
+            group=[self.canvas_objects, self.background],
         )
 
     # support
@@ -363,12 +365,18 @@ class Editor:
                 # 連続してオブジェクトが配置されないための工夫
                 # 次に配置されるのはタイマーが終了してから
                 if not self.object_timer.active:
+                    groups = (
+                        [self.canvas_objects, self.background]
+                        if EDITOR_DATA[self.selection_index]["style"] == "palm_bg"
+                        else [self.canvas_objects, self.foreground]
+                    )
+
                     CanvasObject(
                         pos=mouse_pos(),
                         frames=self.animations[self.selection_index]["frames"],
                         tile_id=self.selection_index,
                         origin=self.origin,
-                        group=self.canvas_objects,
+                        group=groups,
                     )
                     self.object_timer.activate()
 
@@ -446,6 +454,8 @@ class Editor:
         self.display_surface.blit(self.support_line_surf, (0, 0))
 
     def draw_level(self):
+        self.background.draw(self.display_surface)
+
         for cell_pos, tile in self.canvas_data.items():
             pos = self.origin + vector(cell_pos) * TILE_SIZE
 
@@ -495,7 +505,7 @@ class Editor:
                 )
                 self.display_surface.blit(surf, rect)
 
-        self.canvas_objects.draw(self.display_surface)
+        self.foreground.draw(self.display_surface)
 
     def preview(self):
         """オブジェクトやタイルのプレビューを表示する"""
