@@ -36,7 +36,7 @@ class Main:
         # エディタモードからswitchしたときにgrid（レベルの情報が入った辞書）が渡される
         # レベルモードからswitchしたときはgrid=NoneなのでLevelは作られない
         if grid:
-            self.level = Level(grid, self.switch)
+            self.level = Level(grid, self.switch, {"land": self.land_tiles})
 
     def toggle(self):
         """エディタモードとレベルモードを切り替える"""
