@@ -4,7 +4,7 @@ from level import Level
 from pygame.image import load
 from pygame.math import Vector2 as vector
 from settings import WINDOW_HEIGHT, WINDOW_WIDTH
-from support import import_folder_dict
+from support import import_folder, import_folder_dict
 
 
 class Main:
@@ -27,7 +27,18 @@ class Main:
         pygame.mouse.set_cursor(cursor)
 
     def imports(self):
+        # terrain
         self.land_tiles = import_folder_dict("graphics/terrain/land")
+        self.water_bottom = load(
+            "graphics/terrain/water/water_bottom.png"
+        ).convert_alpha()
+        self.water_top_animation = import_folder("graphics/terrain/water/animation")
+
+        # coins
+        self.gold = import_folder("graphics/items/gold")
+        self.silver = import_folder("graphics/items/silver")
+        self.diamond = import_folder("graphics/items/diamond")
+        self.particle = import_folder("graphics/items/particle")
 
     def switch(self, grid=None):
         # モード切り替えを開始する
@@ -36,7 +47,19 @@ class Main:
         # エディタモードからswitchしたときにgrid（レベルの情報が入った辞書）が渡される
         # レベルモードからswitchしたときはgrid=NoneなのでLevelは作られない
         if grid:
-            self.level = Level(grid, self.switch, {"land": self.land_tiles})
+            self.level = Level(
+                grid,
+                self.switch,
+                {
+                    "land": self.land_tiles,
+                    "water bottom": self.water_bottom,
+                    "water top": self.water_top_animation,
+                    "gold": self.gold,
+                    "silver": self.silver,
+                    "diamond": self.diamond,
+                    "particle": self.particle,
+                },
+            )
 
     def toggle(self):
         """エディタモードとレベルモードを切り替える"""
